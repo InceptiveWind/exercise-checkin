@@ -12,84 +12,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: 发送打卡提醒
         env:
           SENDKEY: ${{ secrets.SENDKEY }}
           CHECKIN_URL: ${{ secrets.CHECKIN_URL }}
-        run: |
-          python3 << 'PYEOF'
-          import os
-          import json
-          import urllib.request
-          import urllib.parse
-          from datetime import datetime, timedelta
-
-          sendkey = os.environ['SENDKEY']
-          checkin_url = os.environ['CHECKIN_URL'].rstrip('/')
-
-          # ============== 拉取战绩 ==============
-          stats_line = '📊 战绩：暂不可达'
-          try:
-              with urllib.request.urlopen(f'{checkin_url}/api/records', timeout=8) as r:
-                  data = json.loads(r.read().decode('utf-8'))
-                  if data.get('ok'):
-                      records = data.get('records', [])
-                      total = len(records)
-                      today = datetime.now().strftime('%Y-%m-%d')
-                      today_punched = any(r['date'] == today for r in records)
-
-                      # 计算连续天数
-                      dates = sorted({r['date'] for r in records}, reverse=True)
-                      streak = 0
-                      expected = datetime.now().date()
-                      if dates and dates[0] != expected.strftime('%Y-%m-%d'):
-                          expected = expected - timedelta(days=1)
-                      for d in dates:
-                          if d == expected.strftime('%Y-%m-%d'):
-                              streak += 1
-                              expected = expected - timedelta(days=1)
-                          else:
-                              break
-
-                      stats_line = f'📊 战绩：🔥 连续 **{streak}** 天 ｜ 📅 累计 **{total}** 天'
-                      if today_punched:
-                          stats_line += '\n> ✅ 今天已打卡，明日继续～'
-          except Exception as e:
-              stats_line = f'📊 战绩：拉取失败 ({e})'
-
-          # ============== 构造消息 ==============
-          now = datetime.now()
-          msg = f"""# 🏃 运动时间到啦！
-
-> 现在是 **{now:%H:%M}**，坚持运动，做更好的自己 💪
-
-{stats_line}
-
----
-
-### 👉 [点我打卡]({checkin_url})
-
-打开页面 → 点 "✅ 今日打卡" 即可（可加备注）
-"""
-
-          # ============== 发送微信 ==============
-          payload = urllib.parse.urlencode({
-              'title': '🏃 运动打卡提醒',
-              'desp': msg,
-          }).encode('utf-8')
-          req = urllib.request.Request(
-              f'https://sctapi.ftqq.com/{sendkey}.send',
-              data=payload
-          )
-          try:
-              with urllib.request.urlopen(req, timeout=10) as r:
-                  result = json.loads(r.read().decode('utf-8'))
-                  if result.get('code') == 200:
-                      print('✅ 微信提醒已发送')
-                  else:
-                      print(f'❌ 发送失败: {result}')
-                      raise SystemExit(1)
-          except Exception as e:
-              print(f'❌ 推送异常: {e}')
-              raise SystemExit(1)
-          PYEOF
+        run: python3 .github/scripts/send_reminder.py
