@@ -438,22 +438,35 @@
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
     // ============== 暗色模式 ==============
-    function applyDark(isDark) {
+    // 自动判定：19:00 - 06:59 为深色，07:00 - 18:59 为浅色
+    function isTimeBasedDark() {
+      const hour = new Date().getHours();
+      return hour < 7 || hour >= 19;
+    }
+    function setDarkClass(isDark) {
       document.documentElement.classList.toggle('dark', isDark);
       document.getElementById('darkToggle').textContent = isDark ? '☀️' : '🌙';
-      localStorage.setItem(DARK_KEY, isDark ? '1' : '0');
+    }
+    function getEffectiveMode() {
+      const saved = localStorage.getItem(DARK_KEY);
+      if (saved === '1') return true;
+      if (saved === '0') return false;
+      return isTimeBasedDark();
     }
     function initDark() {
-      const saved = localStorage.getItem(DARK_KEY);
-      if (saved === '1') applyDark(true);
-      else if (saved === '0') applyDark(false);
-      else {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        applyDark(prefersDark);
-      }
+      setDarkClass(getEffectiveMode());
+      // 跨时间边界时自动切换（仅当用户没手动设过偏好）
+      setInterval(() => {
+        if (localStorage.getItem(DARK_KEY) === null) {
+          setDarkClass(isTimeBasedDark());
+        }
+      }, 60_000);  // 每分钟检查一次
     }
     document.getElementById('darkToggle').addEventListener('click', () => {
-      applyDark(!document.documentElement.classList.contains('dark'));
+      const newMode = !document.documentElement.classList.contains('dark');
+      setDarkClass(newMode);
+      // 手动切换 = 写 localStorage，后续不再被自动模式覆盖
+      localStorage.setItem(DARK_KEY, newMode ? '1' : '0');
     });
 
     // ============== 页面切换 ==============
