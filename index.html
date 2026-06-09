@@ -18,9 +18,83 @@
       -webkit-font-smoothing: antialiased;
     }
     .container { max-width: 480px; margin: 0 auto; }
-    .header { text-align: center; margin-bottom: 20px; padding-top: 8px; }
+
+    /* ====== 密码页 ====== */
+    .auth-screen {
+      min-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .auth-screen h1 {
+      font-size: 28px;
+      color: #2e7d32;
+      margin-bottom: 8px;
+    }
+    .auth-screen .hint {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+    .auth-input {
+      width: 100%;
+      max-width: 280px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 16px;
+      text-align: center;
+      letter-spacing: 4px;
+      font-family: inherit;
+      margin-bottom: 12px;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .auth-input:focus { outline: none; border-color: #4CAF50; }
+    .auth-btn {
+      width: 100%;
+      max-width: 280px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .auth-btn:active { background: #388E3C; }
+    .auth-btn:disabled { background: #bdbdbd; cursor: not-allowed; }
+    .auth-error {
+      color: #c62828;
+      font-size: 14px;
+      margin-top: 12px;
+      min-height: 20px;
+    }
+
+    /* ====== 主页面 ====== */
+    .main-screen { display: none; }
+    .main-screen.active { display: block; }
+
+    .header { text-align: center; margin-bottom: 20px; padding-top: 8px; position: relative; }
     .header h1 { font-size: 26px; color: #2e7d32; margin-bottom: 4px; }
     .header .date { font-size: 14px; color: #666; }
+    .logout-btn {
+      position: absolute;
+      top: 8px;
+      right: 0;
+      background: transparent;
+      border: 1px solid #ddd;
+      color: #888;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
 
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
     .stat-card {
@@ -91,47 +165,86 @@
 </head>
 <body>
   <div class="container">
-    <div class="header">
+
+    <!-- 密码页 -->
+    <div id="authScreen" class="auth-screen">
       <h1>🏃 运动打卡</h1>
-      <div class="date" id="currentDate"></div>
+      <div class="hint">请输入密码</div>
+      <input type="password" id="passwordInput" class="auth-input"
+             placeholder="••••" autocomplete="off" maxlength="50">
+      <button id="loginBtn" class="auth-btn">进入</button>
+      <div id="authError" class="auth-error"></div>
     </div>
 
-    <div class="stats">
-      <div class="stat-card">
-        <div class="stat-num" id="streak">-</div>
-        <div class="stat-label">🔥 连续天数</div>
+    <!-- 主页面 -->
+    <div id="mainScreen" class="main-screen">
+      <div class="header">
+        <h1>🏃 运动打卡</h1>
+        <div class="date" id="currentDate"></div>
+        <button id="logoutBtn" class="logout-btn">退出</button>
       </div>
-      <div class="stat-card">
-        <div class="stat-num" id="total">-</div>
-        <div class="stat-label">📅 累计天数</div>
+
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-num" id="streak">-</div>
+          <div class="stat-label">🔥 连续天数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="total">-</div>
+          <div class="stat-label">📅 累计天数</div>
+        </div>
       </div>
+
+      <div class="checkin-card">
+        <h2>今日打卡</h2>
+        <div id="status" class="status pending">加载中...</div>
+        <input type="text" id="noteInput" class="checkin-input"
+               placeholder="今天做了什么运动？（可选，如：跑步 5 公里）"
+               maxlength="100" autocomplete="off">
+        <button id="checkinBtn" class="checkin-btn">✅ 今日打卡</button>
+      </div>
+
+      <div class="history">
+        <h2>打卡历史</h2>
+        <div id="historyList" class="loading">加载中...</div>
+      </div>
+
+      <div class="footer">坚持就是胜利 💪</div>
     </div>
 
-    <div class="checkin-card">
-      <h2>今日打卡</h2>
-      <div id="status" class="status pending">加载中...</div>
-      <input type="text" id="noteInput" class="checkin-input"
-             placeholder="今天做了什么运动？（可选，如：跑步 5 公里）"
-             maxlength="100" autocomplete="off">
-      <button id="checkinBtn" class="checkin-btn">✅ 今日打卡</button>
-    </div>
-
-    <div class="history">
-      <h2>打卡历史</h2>
-      <div id="historyList" class="loading">加载中...</div>
-    </div>
-
-    <div class="footer">坚持就是胜利 💪</div>
   </div>
 
   <script>
     const API_URL = '';  // 同源部署，留空即可
+    const TOKEN_KEY = 'exercise_token';
 
+    // ============== Token 管理 ==============
+    function getToken() { return localStorage.getItem(TOKEN_KEY); }
+    function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+    function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+
+    // ============== 切换页面 ==============
+    function showAuth() {
+      document.getElementById('authScreen').style.display = 'flex';
+      document.getElementById('mainScreen').classList.remove('active');
+    }
+    function showMain() {
+      document.getElementById('authScreen').style.display = 'none';
+      document.getElementById('mainScreen').classList.add('active');
+    }
+
+    // ============== 工具 ==============
     function pad2(n) { return String(n).padStart(2, '0'); }
     function formatDate(d) {
       return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
     }
     function todayStr() { return formatDate(new Date()); }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
 
     function updateCurrentDate() {
       const now = new Date();
@@ -140,12 +253,68 @@
         `${formatDate(now)} ${weekdays[now.getDay()]}`;
     }
 
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-      }[c]));
+    // ============== API 调用（自动带 token）==============
+    async function api(path, options = {}) {
+      const token = getToken();
+      const headers = options.headers ? { ...options.headers } : {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const resp = await fetch(API_URL + path, { ...options, headers, cache: 'no-store' });
+      if (resp.status === 401) {
+        clearToken();
+        showAuth();
+        throw new Error('登录已过期，请重新输入密码');
+      }
+      return resp;
     }
 
+    // ============== 登录 ==============
+    async function doLogin() {
+      const input = document.getElementById('passwordInput');
+      const btn = document.getElementById('loginBtn');
+      const errEl = document.getElementById('authError');
+      const password = input.value;
+
+      errEl.textContent = '';
+      if (!password) {
+        errEl.textContent = '请输入密码';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = '验证中...';
+
+      try {
+        const resp = await fetch(API_URL + '/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || '登录失败');
+        setToken(data.token);
+        input.value = '';
+        showMain();
+        updateCurrentDate();
+        loadData();
+        if (window._refreshTimer) clearInterval(window._refreshTimer);
+        window._refreshTimer = setInterval(loadData, 60000);
+      } catch (e) {
+        errEl.textContent = '❌ ' + e.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '进入';
+      }
+    }
+
+    // ============== 退出 ==============
+    function doLogout() {
+      if (!confirm('确定要退出登录吗？')) return;
+      clearToken();
+      if (window._refreshTimer) clearInterval(window._refreshTimer);
+      showAuth();
+    }
+
+    // ============== 数据加载 ==============
     function calcStats(records) {
       if (!records.length) return { streak: 0, total: 0 };
       const total = records.length;
@@ -155,7 +324,6 @@
       let streak = 0;
       let expected = new Date(today);
 
-      // 今日没打不算断，从昨天开始算
       if (dateSet[0] !== formatDate(today)) {
         expected.setDate(expected.getDate() - 1);
       }
@@ -223,7 +391,7 @@
 
     async function loadData() {
       try {
-        const resp = await fetch(API_URL + '/api/records', { cache: 'no-store' });
+        const resp = await api('/api/records');
         const data = await resp.json();
         if (!data.ok) throw new Error(data.error || '加载失败');
         const records = data.records || [];
@@ -246,7 +414,7 @@
       const oldText = btn.textContent;
       btn.textContent = '打卡中...';
       try {
-        const resp = await fetch(API_URL + '/api/records', {
+        const resp = await api('/api/records', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ note }),
@@ -273,16 +441,28 @@
       }
     }
 
+    // ============== 事件绑定 ==============
+    document.getElementById('loginBtn').addEventListener('click', doLogin);
+    document.getElementById('passwordInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doLogin();
+    });
+    document.getElementById('logoutBtn').addEventListener('click', doLogout);
     document.getElementById('checkinBtn').addEventListener('click', checkin);
     document.getElementById('noteInput').addEventListener('keydown', e => {
       if (e.key === 'Enter' && !document.getElementById('checkinBtn').disabled) checkin();
     });
 
-    updateCurrentDate();
-    loadData();
-
-    // 防止多设备数据不同步，每分钟自动刷新
-    setInterval(loadData, 60000);
+    // ============== 启动 ==============
+    if (getToken()) {
+      showMain();
+      updateCurrentDate();
+      loadData().then(() => {
+        if (window._refreshTimer) clearInterval(window._refreshTimer);
+        window._refreshTimer = setInterval(loadData, 60000);
+      });
+    } else {
+      showAuth();
+    }
   </script>
 </body>
 </html>

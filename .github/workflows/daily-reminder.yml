@@ -21,4 +21,5 @@ jobs:
         env:
           SENDKEY: ${{ secrets.SENDKEY }}
           CHECKIN_URL: ${{ secrets.CHECKIN_URL }}
+          STATS_TOKEN: ${{ secrets.STATS_TOKEN }}
         run: python3 .github/scripts/send_reminder.py

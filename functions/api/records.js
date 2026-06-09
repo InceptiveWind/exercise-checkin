@@ -2,9 +2,18 @@
 // 路径: /functions/api/records.js
 // 自动映射到 URL: /api/records
 //
-// 环境变量（在 Cloudflare Pages 项目里设置）:
+// 认证：
+//   所有请求需要 Authorization: Bearer <token>
+//   - 用户 token（从 /api/auth 获取，30 天有效）：可读可写
+//   - STATS_TOKEN（环境变量配置，永不过期）：只读（用于 GitHub Actions 拉战绩）
+//
+// 环境变量:
 //   UPSTASH_REDIS_REST_URL    - Upstash 控制台里复制
 //   UPSTASH_REDIS_REST_TOKEN  - Upstash 控制台里复制
+//   APP_SECRET                - HMAC 签名密钥（必须和 auth.js 用同一个）
+//   STATS_TOKEN               - GitHub Actions 用的只读 token
+
+import { verifyToken } from './auth.js';
 
 const KEY = 'exercise:records';
 
@@ -23,7 +32,7 @@ function corsHeaders() {
   return {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 }
 
@@ -35,6 +44,42 @@ function jsonResponse(data, status = 200) {
       ...corsHeaders(),
     },
   });
+}
+
+function unauthorized(reason) {
+  return jsonResponse({ ok: false, error: '未授权', reason }, 401);
+}
+
+// ============== 认证 ==============
+async function authenticate(request, env, requireWrite) {
+  const auth = request.headers.get('Authorization') || '';
+  const match = auth.match(/^Bearer\s+(.+)$/i);
+  if (!match) return { ok: false, reason: 'missing' };
+
+  const token = match[1].trim();
+
+  // 写操作只接受用户 token
+  // 读操作接受用户 token 或 STATS_TOKEN
+  if (requireWrite) {
+    if (!env.APP_SECRET) return { ok: false, reason: 'no-secret' };
+    return await verifyToken(env.APP_SECRET, token);
+  }
+
+  // 读：先看是不是 STATS_TOKEN（明文比较，时间恒定）
+  if (env.STATS_TOKEN && token.length === env.STATS_TOKEN.length) {
+    let match2 = true;
+    for (let i = 0; i < token.length; i++) {
+      if (token[i] !== env.STATS_TOKEN[i]) match2 = false;
+    }
+    if (match2) return { ok: true, payload: { sub: 'stats', readOnly: true } };
+  }
+
+  // 不是 stats token，再验用户 token
+  if (env.APP_SECRET) {
+    return await verifyToken(env.APP_SECRET, token);
+  }
+
+  return { ok: false, reason: 'no-secret' };
 }
 
 // ============== Upstash REST ==============
@@ -100,17 +145,24 @@ export async function onRequest(context) {
     return new Response(null, { status: 200, headers: corsHeaders() });
   }
 
-  // 健康检查
+  // 健康检查（无需认证）
   const url = new URL(request.url);
   if (request.method === 'GET' && url.searchParams.has('health')) {
     return jsonResponse({ ok: true, time: new Date().toISOString() });
+  }
+
+  // 认证：读接受用户 token / stats token；写只接受用户 token
+  const requireWrite = request.method === 'POST';
+  const auth = await authenticate(request, env, requireWrite);
+  if (!auth.ok) {
+    return unauthorized(auth.reason);
   }
 
   // 环境变量检查
   if (!env.UPSTASH_REDIS_REST_URL || !env.UPSTASH_REDIS_REST_TOKEN) {
     return jsonResponse({
       ok: false,
-      error: '服务器未配置 Upstash 环境变量，请联系管理员',
+      error: '服务器未配置 Upstash 环境变量',
     }, 500);
   }
 
@@ -125,7 +177,7 @@ export async function onRequest(context) {
       try {
         body = await request.json();
       } catch (e) {
-        // 忽略 JSON 解析错误，使用默认值
+        // 忽略 JSON 解析错误
       }
       const note = body.note || '';
       const result = await addRecord(env, note);

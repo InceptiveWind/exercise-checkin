@@ -17,9 +17,13 @@ import urllib.request
 from datetime import datetime, timedelta
 
 
-def fetch_records(base_url):
-    """从打卡页后端拉取所有记录"""
-    with urllib.request.urlopen(f"{base_url}/api/records", timeout=8) as r:
+def fetch_records(base_url, stats_token):
+    """从打卡页后端拉取所有记录（用 stats token 认证）"""
+    req = urllib.request.Request(
+        f"{base_url}/api/records",
+        headers={"Authorization": f"Bearer {stats_token}"},
+    )
+    with urllib.request.urlopen(req, timeout=8) as r:
         return json.loads(r.read().decode("utf-8"))
 
 
@@ -85,14 +89,18 @@ def send_wechat(sendkey, title, content):
 def main():
     sendkey = os.environ.get("SENDKEY", "").strip()
     checkin_url = os.environ.get("CHECKIN_URL", "").strip().rstrip("/")
+    stats_token = os.environ.get("STATS_TOKEN", "").strip()
 
     if not sendkey or not checkin_url:
         print("❌ 缺少环境变量 SENDKEY 或 CHECKIN_URL")
         sys.exit(1)
+    if not stats_token:
+        print("❌ 缺少环境变量 STATS_TOKEN")
+        sys.exit(1)
 
     # 拉取战绩
     try:
-        data = fetch_records(checkin_url)
+        data = fetch_records(checkin_url, stats_token)
         if not data.get("ok"):
             raise RuntimeError(data.get("error", "unknown"))
         stats = calc_streak(data.get("records", []))
