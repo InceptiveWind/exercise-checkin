@@ -1,6 +1,0 @@
-{
-  "name": "exercise-checkin",
-  "version": "1.0.0",
-  "private": true,
-  "description": "每日运动打卡 - H5 + Vercel + Upstash"
-}
