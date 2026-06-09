@@ -19,8 +19,7 @@ jobs:
 
       - name: 发送打卡提醒
         env:
-          WX_APPTOKEN: ${{ secrets.WX_APPTOKEN }}
-          WX_UID: ${{ secrets.WX_UID }}
+          SENDKEY: ${{ secrets.SENDKEY }}
           CHECKIN_URL: ${{ secrets.CHECKIN_URL }}
           STATS_TOKEN: ${{ secrets.STATS_TOKEN }}
         run: python3 .github/scripts/send_reminder.py
