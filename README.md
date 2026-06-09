@@ -1,135 +1,207 @@
-# 运动打卡 - 部署指南
+# 刘峰的运动打卡
 
-完整流程：每天 20:00 → 电脑 Python 脚本推送微信 → 微信里点链接 → 手机 H5 页面打卡 → 数据存 Upstash Redis。
-
-部署只需要 4 步，全程 20 分钟左右。
-
-## 你需要注册的账号（全部免费）
-
-| 服务 | 用途 | 注册 |
-|------|------|------|
-| **GitHub** | 存放代码 | https://github.com （邮箱注册） |
-| **Vercel** | 部署前端 + API | https://vercel.com （用 GitHub 登录） |
-| **Upstash** | Redis 数据库 | https://upstash.com （用 GitHub 登录） |
-| **Server酱** | 微信推送 | https://sct.ftqq.com/ （微信扫码） |
+每天 20:00 自动微信提醒打卡，手机 H5 页面上点击打卡，数据存云端。
+**全免费、零服务器、不依赖电脑常开。**
 
 ---
 
-## 步骤 1：创建 GitHub 仓库
+## 🏗 架构图
 
-1. 打开 https://github.com/new
-2. Repository name: `exercise-checkin`（随便起）
-3. 选 `Public` 或 `Private` 都行
-4. **不要**勾选 Add README / .gitignore
-5. 点 Create repository
-6. 按页面提示把本地代码 push 上去：
+```
+┌──────────────────┐   cron (北京 20:00)   ┌──────────────────┐
+│  GitHub Actions  │ ────────────────────▶ │  Server酱 推送    │
+│  (云端 cron)      │                       │  微信             │
+└────────┬─────────┘                       └──────────────────┘
+         │ 带 STATS_TOKEN (只读)
+         │ 拉战绩
+         ▼
+┌──────────────────┐                       ┌──────────────────┐
+│  Cloudflare Pages │ ◀──── 用户点链接 ─────│  你的手机微信     │
+│  - 静态 H5 页面   │                       └──────────────────┘
+│  - Functions API  │
+│  - 密码登录       │
+└────────┬─────────┘
+         │ 读写
+         ▼
+┌──────────────────┐
+│  Upstash Redis   │
+│  (云端数据库)    │
+└──────────────────┘
+```
 
+---
+
+## 📦 用到的服务
+
+| 服务 | 用途 | 免费额度 | 注册地址 |
+|------|------|----------|----------|
+| **GitHub** | 存代码 + 跑定时任务 | 2000 min/月 | https://github.com |
+| **Cloudflare Pages** | 部署前端 + API | 无限 | https://dash.cloudflare.com |
+| **Upstash Redis** | 云端数据库 | 10k 请求/天 | https://console.upstash.com |
+| **Server酱** | 微信推送 | 5 次/天 | https://sct.ftqq.com |
+
+---
+
+## 📁 项目结构
+
+```
+exercise-checkin/
+├── index.html                       # 移动端 H5 打卡页面
+├── functions/api/
+│   ├── auth.js                      # 密码登录，签发 HMAC token
+│   ├── records.js                   # 打卡记录 CRUD（GET/POST/DELETE）
+│   └── debug.js                     # 调试用，列出当前函数能拿到的 env vars
+├── .github/
+│   ├── workflows/daily-reminder.yml # GitHub Actions 定时任务
+│   └── scripts/send_reminder.py     # 推送逻辑
+├── vercel.json                      # 早期 Vercel 配置（已弃用，留作历史）
+└── README.md                        # 本文件
+```
+
+---
+
+## 🔐 Cloudflare Pages 环境变量
+
+去 Cloudflare Dashboard → Pages → 项目 → Settings → Environment variables。
+
+**生产环境（Production）必加：**
+
+| 变量 | 作用 | 示例 |
+|------|------|------|
+| `APP_PASSWORD` | 用户登录密码（明文）| `lf850913` |
+| `APP_SECRET` | HMAC token 签名密钥（64 字符随机）| 用 `python -c "import secrets; print(secrets.token_hex(32))"` 生成 |
+| `STATS_TOKEN` | GitHub Actions 用的只读 token（64 字符随机）| 同上方法生成 |
+| `UPSTASH_REDIS_REST_URL` | Upstash REST API 地址 | `https://xxx.upstash.io` |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash REST API 密钥 | Upstash 控制台复制 |
+
+⚠️ 范围要勾 **Production**（或选 All environments）。
+⚠️ 改完 env vars **必须 Retry deployment** 才生效。
+
+---
+
+## 🔐 GitHub Secrets
+
+去 GitHub 仓库 → Settings → Secrets and variables → Actions。
+
+| 名称 | 值 |
+|------|-----|
+| `SENDKEY` | Server酱 提供的 SendKey |
+| `CHECKIN_URL` | Cloudflare Pages 给的域名，如 `https://xxx.pages.dev` |
+| `STATS_TOKEN` | **必须和 Cloudflare Pages 里那个完全一样** |
+
+---
+
+## 🗄 数据模型
+
+Upstash Redis 里用 Hash 存：
+
+```
+Key:   exercise:records
+Field: 日期 (YYYY-MM-DD)
+Value: {
+  "types": ["力量", "有氧"],   // 运动类型数组
+  "note": "上午力量，下午跑步", // 备注
+  "time": "20:15:30"           // 打卡时间；补卡固定 "12:00:00"
+}
+```
+
+**一天一条记录**，多种运动类型共享一条备注。
+
+---
+
+## 🚀 从零部署步骤
+
+### 1. 准备账号
+依次注册 GitHub / Cloudflare / Upstash / Server酱，登录后**关掉页面别关账号**。
+
+### 2. 推代码到 GitHub
 ```bash
 cd exercise-app
-git init
-git add .
-git commit -m "init"
-git branch -M main
+git init && git add . && git commit -m "init"
 git remote add origin https://github.com/你的用户名/exercise-checkin.git
 git push -u origin main
 ```
 
-> 没装 git 的话先装：https://git-scm.com/download/win
+### 3. 创建 Upstash Redis
+- 登录 console.upstash.com
+- Create Database
+- Type: **Regional**（重要）
+- Region: **AP-Southeast-1**（新加坡，国内访问最快）
+- TLS: 勾上
+- 创建后复制 **REST API** 的 URL 和 Token
 
-## 步骤 2：创建 Upstash Redis 数据库
+### 4. 创建 Cloudflare Pages 项目
+- dash.cloudflare.com → Workers 和 Pages → Pages → **Connect to Git**
+- 选仓库 `exercise-checkin`
+- 构建设置：
+  - Framework preset: **None**
+  - Build command: **留空**
+  - Build output directory: **留空**
+- 加 5 个 env vars（见上表）
+- Save and Deploy
 
-1. 打开 https://console.upstash.com/ ，用 GitHub 登录
-2. 点 **Create Database**
-3. 填写：
-   - Name: `exercise`
-   - Type: **Regional**（国内访问稍快）
-   - Region: 选 `ap-northeast-1` (东京) 或 `ap-southeast-1` (新加坡)
-   - TLS: 勾选
-4. 点 Create
-5. 进入数据库详情页，往下滚到 **REST API** 部分
-6. 复制这两个值（点眼睛图标显示 token）：
-   - `UPSTASH_REDIS_REST_URL`
-   - `UPSTASH_REDIS_REST_TOKEN`
+### 5. 加 GitHub Secrets
+- 仓库 → Settings → Secrets and variables → Actions
+- 加 3 个 secrets：`SENDKEY` / `CHECKIN_URL` / `STATS_TOKEN`
 
-⚠️ **这两个值先保存到记事本，待会要用**
+### 6. 验证
+- 访问 Pages 域名 → 应看到密码框
+- 输密码 → 进入打卡页
+- 测试打卡 / 编辑 / 删除
+- 手动 Run workflow（Actions 标签 → Run workflow）→ 微信应收到推送
 
-## 步骤 3：部署到 Vercel
+---
 
-1. 打开 https://vercel.com/new ，用 GitHub 登录
-2. 找到刚才创建的 `exercise-checkin` 仓库，点 **Import**
-3. 展开 **Environment Variables**（环境变量），添加：
-   - Name: `UPSTASH_REDIS_REST_URL`，Value: 步骤 2 复制的 URL
-   - Name: `UPSTASH_REDIS_REST_TOKEN`，Value: 步骤 2 复制的 Token
-4. 点 **Deploy**
-5. 等待 1-2 分钟，部署完成会显示一个域名，类似：
-   ```
-   https://exercise-checkin-xxx.vercel.app
-   ```
-6. **复制这个域名，待会要用**
+## 🛠 日常维护
 
-### 验证部署
-浏览器打开 `https://你的域名.vercel.app`，应该能看到打卡页面。
-打开 `https://你的域名.vercel.app/api/records?health=1` 应该返回 `{"ok":true,...}`。
+| 想做的事 | 怎么操作 |
+|----------|----------|
+| 改提醒时间 | 编辑 `.github/workflows/daily-reminder.yml` 的 cron 表达式 |
+| 改主题切换时间 | 编辑 `index.html` 的 `isTimeBasedDark()` 函数 |
+| 改密码 | Cloudflare Pages → Settings → Environment variables → 改 `APP_PASSWORD` → Retry deployment |
+| 换密钥 | 用 Python 生成新的 `secrets.token_hex(32)`，**同时**更新 Cloudflare 和 GitHub 两边的 `STATS_TOKEN` |
+| 查看函数拿到了哪些 env vars | 访问 `https://你的域名.pages.dev/api/debug` |
+| 修改后部署 | `git push` → Cloudflare 自动重 deploy |
 
-## 步骤 4：配置 Server酱 推送
+---
 
-1. 打开 https://sct.ftqq.com/ 微信扫码登录，复制 SendKey
-2. 编辑本地的 `exercise_reminder.py`，改两处：
-   ```python
-   CHECKIN_URL = "https://你的域名.vercel.app"  # 步骤 3 的域名
-   # ...配置 SendKey...
-   ```
-3. 测试一次：
-   ```bash
-   python exercise_reminder.py test
-   ```
-   微信收到的消息里应该带有打卡链接，点击应该能直接打开打卡页
+## ⚠️ 已知坑
 
-## 完整流程
+1. **Vercel 域名在国内被 DNS 污染**（`*.vercel.app` 解析到 Facebook IP），所以没用 Vercel。Cloudflare Pages 在国内访问稳定。
+2. **`package.json` 不能有**（即使空），否则 Cloudflare Pages 会装 workerd（119MB），超出 25MB 资产上限。
+3. **不要把 `package.json` / `node_modules` 加进去**——本项目用纯标准库实现 Pages Functions，零依赖。
+4. **GitHub Actions 的 timezone**：cron 表达式是 UTC 时区。北京 20:00 = UTC 12:00。
+5. **跨时区打卡**：补卡和"今天"的判断都用 `tzOffset`，北京/纽约/UTC 用户都能正确处理。
+6. **Worker 域名（`*.workers.dev`）和 Pages 域名（`*.pages.dev`）是两回事**，别混。
 
-```
-20:00  电脑上的 exercise_reminder.py 触发
-  ↓
-Server酱 推送微信消息：
-  "🏃 该运动了！👉 https://你的域名.vercel.app"
-  ↓
-你点链接 → 微信内置浏览器打开打卡页
-  ↓
-点"✅ 今日打卡" + 写运动内容
-  ↓
-数据写入 Upstash Redis
-  ↓
-页面刷新，显示 ✅ 已打卡 + 连续 N 天
-```
+---
 
-## 文件说明
+## 🔄 数据迁移说明
 
-| 文件 | 作用 |
+如果从旧版本（一天一条 `note`）升级：
+- API 读老数据时**自动包装**成 `types: ["日常"]`
+- 写的时候**只写新格式**
+- 旧记录可以直接在页面上"编辑"改成新格式
+
+---
+
+## 📝 历史
+
+- 最初版本：Vercel + Upstash（被 DNS 污染弃用）
+- 当前版本：Cloudflare Pages + Upstash + GitHub Actions
+
+---
+
+## 🆘 出问题怎么办
+
+| 现象 | 检查 |
 |------|------|
-| `index.html` | 移动端 H5 打卡页面 |
-| `api/records.js` | Vercel Serverless API，读写 Redis |
-| `vercel.json` | Vercel 配置 |
-| `package.json` | 项目元信息（无依赖） |
-| `.gitignore` | Git 忽略规则 |
+| 打开页面 404 | Cloudflare Pages → Deployments 看构建日志 |
+| 提示"服务器未配置密码或密钥" | 访问 `/api/debug` 看 env vars 是否齐全；确认勾了 Production；改完记得 Retry |
+| 收不到微信推送 | Server酱 公众号有没有过期；检查 GitHub Actions 日志 |
+| 月历翻到未来日期 | 正常，未来日期灰色不可点 |
+| 改完代码没生效 | 看 Cloudflare Pages Deployments 是否触发；必要时手动 Retry |
 
-## 常见问题
+---
 
-**Q: 部署后打开页面是 404？**
-A: 等 1 分钟再刷新，Vercel 冷启动需要时间。
-
-**Q: API 返回 "Upstash 环境变量未配置"？**
-A: 去 Vercel 项目 → Settings → Environment Variables 检查两个变量是否都加上了，加完后要重新部署一次（Deployments → 选最新 → Redeploy）。
-
-**Q: 微信里打开页面提示"非微信官方网页"？**
-A: 用 Vercel 默认域名可能会被微信拦截。解决办法：
-1. 在 Vercel 绑个自己的域名（一行 CNAME 解析）
-2. 或者用 Server酱 的"消息原文"里放一个短链
-
-**Q: 每天 20:00 电脑必须开着吗？**
-A: 是的，发送推送需要跑 Python 脚本。后面可以加 Windows 任务计划程序开机自启。
-
-**Q: 想换提醒时间？**
-A: 改 `exercise_reminder.py` 里的 `REMIND_TIME`。
-
-**Q: 数据安全吗？**
-A: 数据在 Upstash 公开网络上，但只有知道 URL 的人能访问（GET 无副作用，POST 才会写）。如果担心，可以加一个简单的 Token 验证。
+最后更新：2026-06
