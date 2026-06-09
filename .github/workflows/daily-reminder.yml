@@ -11,6 +11,8 @@ jobs:
   remind:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      TZ: Asia/Shanghai  # 让 datetime.now() 返回北京时间
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
