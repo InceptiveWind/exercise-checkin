@@ -7,15 +7,72 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>运动打卡</title>
   <style>
+    /* ====== CSS 变量（暗色模式切换）====== */
+    :root {
+      --bg-start: #e8f5e9;
+      --bg-end: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f5f5f5;
+      --bg-overlay: rgba(0, 0, 0, 0.5);
+      --bg-input: #ffffff;
+      --text-primary: #333333;
+      --text-secondary: #666666;
+      --text-tertiary: #999999;
+      --text-inverse: #ffffff;
+      --border: #e0e0e0;
+      --border-light: #f0f0f0;
+      --accent: #4CAF50;
+      --accent-dark: #388E3C;
+      --status-done-bg: #e8f5e9;
+      --status-done-text: #2e7d32;
+      --status-pending-bg: #fff3e0;
+      --status-pending-text: #e65100;
+      --status-error-bg: #ffebee;
+      --status-error-text: #c62828;
+      --shadow-sm: rgba(0, 0, 0, 0.06);
+      --shadow-md: rgba(0, 0, 0, 0.08);
+      --calendar-today: #ff9800;
+      --calendar-record-bg: #c8e6c9;
+      --calendar-record-today-bg: #fff3e0;
+    }
+    :root.dark {
+      --bg-start: #1a1a1a;
+      --bg-end: #0d0d0d;
+      --bg-card: #2a2a2a;
+      --bg-card-hover: #353535;
+      --bg-overlay: rgba(0, 0, 0, 0.7);
+      --bg-input: #1f1f1f;
+      --text-primary: #e0e0e0;
+      --text-secondary: #b0b0b0;
+      --text-tertiary: #808080;
+      --text-inverse: #1a1a1a;
+      --border: #404040;
+      --border-light: #2a2a2a;
+      --accent: #66bb6a;
+      --accent-dark: #81c784;
+      --status-done-bg: #1e3a1e;
+      --status-done-text: #81c784;
+      --status-pending-bg: #3e2a1a;
+      --status-pending-text: #ffb74d;
+      --status-error-bg: #3e1a1a;
+      --status-error-text: #ef5350;
+      --shadow-sm: rgba(0, 0, 0, 0.3);
+      --shadow-md: rgba(0, 0, 0, 0.4);
+      --calendar-today: #ffa726;
+      --calendar-record-bg: #2e4a2e;
+      --calendar-record-today-bg: #4a3a1e;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html, body { height: 100%; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
-      background: linear-gradient(180deg, #e8f5e9 0%, #ffffff 60%);
+      background: linear-gradient(180deg, var(--bg-start) 0%, var(--bg-end) 60%);
       min-height: 100vh;
-      padding: 20px 16px 40px;
-      color: #333;
+      padding: 16px 14px 40px;
+      color: var(--text-primary);
       -webkit-font-smoothing: antialiased;
+      transition: background 0.2s, color 0.2s;
     }
     .container { max-width: 480px; margin: 0 auto; }
 
@@ -28,139 +85,222 @@
       justify-content: center;
       text-align: center;
     }
-    .auth-screen h1 {
-      font-size: 28px;
-      color: #2e7d32;
-      margin-bottom: 8px;
-    }
-    .auth-screen .hint {
-      color: #888;
-      font-size: 14px;
-      margin-bottom: 28px;
-    }
+    .auth-screen h1 { font-size: 28px; color: var(--accent); margin-bottom: 8px; }
+    .auth-screen .hint { color: var(--text-tertiary); font-size: 14px; margin-bottom: 28px; }
     .auth-input {
-      width: 100%;
-      max-width: 280px;
-      border: 2px solid #e0e0e0;
-      border-radius: 10px;
-      padding: 14px 16px;
-      font-size: 16px;
-      text-align: center;
-      letter-spacing: 4px;
-      font-family: inherit;
-      margin-bottom: 12px;
-      -webkit-appearance: none;
-      appearance: none;
+      width: 100%; max-width: 280px; border: 2px solid var(--border);
+      border-radius: 10px; padding: 14px 16px; font-size: 16px;
+      text-align: center; letter-spacing: 4px; font-family: inherit;
+      margin-bottom: 12px; background: var(--bg-input); color: var(--text-primary);
+      -webkit-appearance: none; appearance: none;
     }
-    .auth-input:focus { outline: none; border-color: #4CAF50; }
+    .auth-input:focus { outline: none; border-color: var(--accent); }
     .auth-btn {
-      width: 100%;
-      max-width: 280px;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 14px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      font-family: inherit;
+      width: 100%; max-width: 280px; background: var(--accent); color: var(--text-inverse);
+      border: none; border-radius: 10px; padding: 14px; font-size: 16px;
+      font-weight: bold; cursor: pointer; font-family: inherit;
     }
-    .auth-btn:active { background: #388E3C; }
-    .auth-btn:disabled { background: #bdbdbd; cursor: not-allowed; }
-    .auth-error {
-      color: #c62828;
-      font-size: 14px;
-      margin-top: 12px;
-      min-height: 20px;
-    }
+    .auth-btn:active { background: var(--accent-dark); }
+    .auth-btn:disabled { background: var(--text-tertiary); cursor: not-allowed; }
+    .auth-error { color: var(--status-error-text); font-size: 14px; margin-top: 12px; min-height: 20px; }
 
     /* ====== 主页面 ====== */
     .main-screen { display: none; }
     .main-screen.active { display: block; }
 
-    .header { text-align: center; margin-bottom: 20px; padding-top: 8px; position: relative; }
-    .header h1 { font-size: 26px; color: #2e7d32; margin-bottom: 4px; }
-    .header .date { font-size: 14px; color: #666; }
-    .logout-btn {
-      position: absolute;
-      top: 8px;
-      right: 0;
-      background: transparent;
-      border: 1px solid #ddd;
-      color: #888;
-      border-radius: 8px;
-      padding: 4px 10px;
-      font-size: 12px;
-      cursor: pointer;
-      font-family: inherit;
+    .header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; padding: 4px 0;
+    }
+    .header h1 { font-size: 22px; color: var(--accent); }
+    .header-actions { display: flex; gap: 8px; }
+    .icon-btn {
+      background: var(--bg-card); border: 1px solid var(--border);
+      color: var(--text-secondary); border-radius: 8px;
+      padding: 6px 12px; font-size: 13px; cursor: pointer;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .icon-btn:active { background: var(--bg-card-hover); }
+
+    /* ====== 统计卡 ====== */
+    .stats-card {
+      background: var(--bg-card); border-radius: 14px; padding: 14px 16px;
+      box-shadow: 0 2px 8px var(--shadow-sm); margin-bottom: 14px;
+    }
+    .stats-row { display: flex; gap: 12px; margin-bottom: 10px; }
+    .stat-box { flex: 1; text-align: center; }
+    .stat-num { font-size: 24px; font-weight: bold; color: var(--accent); line-height: 1.1; }
+    .stat-label { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+    .month-types { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; border-top: 1px solid var(--border-light); }
+    .type-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--bg-card-hover); border-radius: 12px;
+      padding: 4px 10px; font-size: 13px; color: var(--text-secondary);
+    }
+    .type-pill strong { color: var(--text-primary); font-weight: 600; }
+
+    /* ====== 月历 ====== */
+    .calendar-card {
+      background: var(--bg-card); border-radius: 14px; padding: 14px;
+      box-shadow: 0 2px 8px var(--shadow-sm); margin-bottom: 14px;
+    }
+    .cal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .cal-title { font-size: 17px; font-weight: 600; color: var(--text-primary); }
+    .cal-nav {
+      background: transparent; border: none; color: var(--text-secondary);
+      font-size: 18px; padding: 4px 10px; cursor: pointer; font-family: inherit;
+    }
+    .cal-nav:active { color: var(--accent); }
+    .cal-weekdays {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      gap: 2px; margin-bottom: 6px;
+    }
+    .cal-weekday {
+      text-align: center; font-size: 11px; color: var(--text-tertiary);
+      padding: 4px 0; font-weight: 500;
+    }
+    .cal-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .cal-day {
+      aspect-ratio: 1; border-radius: 8px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: transparent; border: 1px solid transparent;
+      cursor: pointer; font-family: inherit; color: var(--text-primary);
+      position: relative; padding: 2px;
+      transition: background 0.1s;
+    }
+    .cal-day:active { background: var(--bg-card-hover); }
+    .cal-day.empty { cursor: default; }
+    .cal-day.empty:active { background: transparent; }
+    .cal-day .day-num { font-size: 13px; line-height: 1; }
+    .cal-day.has-record .day-num { font-weight: 600; }
+    .cal-day.has-record { background: var(--calendar-record-bg); }
+    .cal-day.is-today { border-color: var(--calendar-today); }
+    .cal-day.is-today.has-record { background: var(--calendar-record-today-bg); }
+    .cal-day .day-icons {
+      display: flex; gap: 1px; margin-top: 2px; font-size: 8px; line-height: 1;
+    }
+    .cal-day .backfill-mark {
+      position: absolute; top: 1px; right: 2px;
+      font-size: 8px; color: var(--text-tertiary); line-height: 1;
     }
 
-    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-    .stat-card {
-      background: white; border-radius: 12px; padding: 14px;
-      text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    /* ====== 今日打卡（固定按钮）====== */
+    .quick-add {
+      background: var(--accent); color: var(--text-inverse);
+      border: none; border-radius: 14px; padding: 14px;
+      font-size: 16px; font-weight: bold; cursor: pointer;
+      width: 100%; box-shadow: 0 2px 8px var(--shadow-md);
+      font-family: inherit; transition: transform 0.1s, background 0.1s;
     }
-    .stat-num { font-size: 26px; font-weight: bold; color: #2e7d32; line-height: 1.2; }
-    .stat-label { font-size: 12px; color: #999; margin-top: 4px; }
+    .quick-add:active { transform: scale(0.98); background: var(--accent-dark); }
 
-    .checkin-card {
-      background: white; border-radius: 16px; padding: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px;
+    .today-status {
+      background: var(--bg-card); border-radius: 14px; padding: 14px 16px;
+      box-shadow: 0 2px 8px var(--shadow-sm); margin-bottom: 14px;
     }
-    .checkin-card h2 { font-size: 17px; margin-bottom: 12px; color: #2e7d32; }
-
-    .status {
-      text-align: center; padding: 10px 12px; margin-bottom: 14px;
-      border-radius: 8px; font-size: 14px; line-height: 1.4;
+    .today-status.has-record { border-left: 4px solid var(--accent); }
+    .today-status-title {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 6px;
     }
-    .status.done { background: #e8f5e9; color: #2e7d32; }
-    .status.pending { background: #fff3e0; color: #e65100; }
-    .status.error { background: #ffebee; color: #c62828; }
-
-    .checkin-input {
-      width: 100%; border: 2px solid #e0e0e0; border-radius: 10px;
-      padding: 12px 14px; font-size: 15px; margin-bottom: 12px;
-      font-family: inherit; transition: border-color 0.2s;
-      -webkit-appearance: none; appearance: none;
+    .today-status-title .label { font-size: 14px; color: var(--text-secondary); }
+    .today-status-title .time { font-size: 12px; color: var(--text-tertiary); }
+    .today-status .types {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;
     }
-    .checkin-input:focus { outline: none; border-color: #4CAF50; }
-    .checkin-input::placeholder { color: #bbb; }
-
-    .checkin-btn {
-      width: 100%; background: #4CAF50; color: white; border: none;
-      border-radius: 10px; padding: 14px; font-size: 16px;
-      font-weight: bold; cursor: pointer; transition: all 0.2s;
-      font-family: inherit;
+    .type-badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: var(--accent); color: var(--text-inverse);
+      border-radius: 10px; padding: 3px 9px; font-size: 12px;
     }
-    .checkin-btn:active { background: #388E3C; transform: scale(0.98); }
-    .checkin-btn:disabled { background: #bdbdbd; cursor: not-allowed; transform: none; }
-
-    .history {
-      background: white; border-radius: 16px; padding: 16px 18px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    .today-status .note { color: var(--text-secondary); font-size: 14px; line-height: 1.4; }
+    .today-status .actions { margin-top: 10px; display: flex; gap: 8px; }
+    .small-btn {
+      flex: 1; padding: 8px; font-size: 13px; border-radius: 8px;
+      cursor: pointer; font-family: inherit; transition: all 0.1s;
     }
-    .history h2 { font-size: 17px; margin-bottom: 8px; color: #2e7d32; }
-
-    .history-item {
-      padding: 10px 0; border-bottom: 1px solid #f0f0f0;
-      display: flex; align-items: flex-start; gap: 10px;
+    .small-btn.primary { background: var(--accent); color: var(--text-inverse); border: none; }
+    .small-btn.secondary {
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border);
     }
-    .history-item:last-child { border-bottom: none; }
-    .history-dot {
-      width: 8px; height: 8px; border-radius: 50%; background: #4CAF50;
-      margin-top: 7px; flex-shrink: 0;
+    .small-btn:active { opacity: 0.7; }
+
+    /* ====== 弹窗 ====== */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: var(--bg-overlay);
+      display: none; align-items: flex-end; justify-content: center;
+      z-index: 100; backdrop-filter: blur(2px);
     }
-    .history-content { flex: 1; min-width: 0; }
-    .history-meta { display: flex; align-items: baseline; gap: 8px; }
-    .history-date { font-weight: 600; color: #333; font-size: 14px; }
-    .history-time { color: #999; font-size: 12px; }
-    .history-note { color: #555; font-size: 14px; margin-top: 2px; word-break: break-word; }
+    .modal-backdrop.active { display: flex; }
+    .modal {
+      background: var(--bg-card); width: 100%; max-width: 480px;
+      border-radius: 16px 16px 0 0; padding: 20px 18px 28px;
+      max-height: 90vh; overflow-y: auto; animation: slideUp 0.2s ease-out;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-title {
+      font-size: 18px; font-weight: 600; color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .modal-subtitle { font-size: 13px; color: var(--text-tertiary); margin-bottom: 16px; }
+    .form-label {
+      font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;
+      display: block; font-weight: 500;
+    }
+    .type-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+      margin-bottom: 18px;
+    }
+    .type-chip {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 14px 12px; border-radius: 10px;
+      border: 2px solid var(--border); background: var(--bg-input);
+      color: var(--text-secondary); font-size: 15px; font-weight: 500;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .type-chip:active { transform: scale(0.97); }
+    .type-chip.selected {
+      background: var(--accent); color: var(--text-inverse);
+      border-color: var(--accent);
+    }
+    .type-chip .emoji { font-size: 18px; }
+    .modal-input {
+      width: 100%; border: 2px solid var(--border);
+      border-radius: 10px; padding: 12px 14px; font-size: 15px;
+      font-family: inherit; resize: vertical; min-height: 80px;
+      background: var(--bg-input); color: var(--text-primary);
+      -webkit-appearance: none; appearance: none; margin-bottom: 18px;
+    }
+    .modal-input:focus { outline: none; border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 10px; }
+    .modal-btn {
+      flex: 1; padding: 14px; font-size: 15px; font-weight: 600;
+      border-radius: 10px; cursor: pointer; font-family: inherit;
+      transition: all 0.1s;
+    }
+    .modal-btn.primary { background: var(--accent); color: var(--text-inverse); border: none; }
+    .modal-btn.primary:active { background: var(--accent-dark); }
+    .modal-btn.danger { background: #f44336; color: white; border: none; }
+    .modal-btn.danger:active { background: #d32f2f; }
+    .modal-btn.secondary {
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .modal-error {
+      color: var(--status-error-text); font-size: 13px;
+      margin-bottom: 10px; min-height: 18px;
+    }
 
-    .empty { text-align: center; color: #999; padding: 20px; font-size: 14px; }
-    .loading { text-align: center; padding: 20px; color: #999; font-size: 14px; }
-
-    .footer { text-align: center; color: #bbb; font-size: 12px; margin-top: 20px; }
+    .empty { text-align: center; color: var(--text-tertiary); padding: 20px; font-size: 14px; }
+    .footer { text-align: center; color: var(--text-tertiary); font-size: 12px; margin-top: 18px; }
   </style>
 </head>
 <body>
@@ -180,50 +320,135 @@
     <div id="mainScreen" class="main-screen">
       <div class="header">
         <h1>🏃 运动打卡</h1>
-        <div class="date" id="currentDate"></div>
-        <button id="logoutBtn" class="logout-btn">退出</button>
-      </div>
-
-      <div class="stats">
-        <div class="stat-card">
-          <div class="stat-num" id="streak">-</div>
-          <div class="stat-label">🔥 连续天数</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="total">-</div>
-          <div class="stat-label">📅 累计天数</div>
+        <div class="header-actions">
+          <button id="darkToggle" class="icon-btn" title="暗色模式">🌙</button>
+          <button id="logoutBtn" class="icon-btn" title="退出">退出</button>
         </div>
       </div>
 
-      <div class="checkin-card">
-        <h2>今日打卡</h2>
-        <div id="status" class="status pending">加载中...</div>
-        <input type="text" id="noteInput" class="checkin-input"
-               placeholder="今天做了什么运动？（可选，如：跑步 5 公里）"
-               maxlength="100" autocomplete="off">
-        <button id="checkinBtn" class="checkin-btn">✅ 今日打卡</button>
+      <!-- 统计卡 -->
+      <div class="stats-card">
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-num" id="streak">-</div>
+            <div class="stat-label">🔥 连续天数</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="total">-</div>
+            <div class="stat-label">📅 累计天数</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num" id="monthTotal">-</div>
+            <div class="stat-label">📆 本月次数</div>
+          </div>
+        </div>
+        <div class="month-types" id="monthTypes"></div>
       </div>
 
-      <div class="history">
-        <h2>打卡历史</h2>
-        <div id="historyList" class="loading">加载中...</div>
+      <!-- 今日状态 -->
+      <div id="todayStatus" class="today-status">
+        <div class="empty" id="todayStatusText">今日还未打卡</div>
       </div>
 
-      <div class="footer">坚持就是胜利 💪</div>
+      <!-- 月历 -->
+      <div class="calendar-card">
+        <div class="cal-header">
+          <button class="cal-nav" id="prevMonth">‹</button>
+          <div class="cal-title" id="calTitle">2026年6月</div>
+          <button class="cal-nav" id="nextMonth">›</button>
+        </div>
+        <div class="cal-weekdays">
+          <div class="cal-weekday">日</div>
+          <div class="cal-weekday">一</div>
+          <div class="cal-weekday">二</div>
+          <div class="cal-weekday">三</div>
+          <div class="cal-weekday">四</div>
+          <div class="cal-weekday">五</div>
+          <div class="cal-weekday">六</div>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+
+      <div class="footer">点击日历任意一天可补卡或编辑</div>
     </div>
 
   </div>
 
-  <script>
-    const API_URL = '';  // 同源部署，留空即可
-    const TOKEN_KEY = 'exercise_token';
+  <!-- 弹窗 -->
+  <div id="modalBackdrop" class="modal-backdrop">
+    <div class="modal" id="modal">
+      <div class="modal-title" id="modalTitle">打卡</div>
+      <div class="modal-subtitle" id="modalSubtitle"></div>
 
-    // ============== Token 管理 ==============
+      <label class="form-label">运动类型（可多选）</label>
+      <div class="type-grid" id="typeGrid"></div>
+
+      <label class="form-label">备注（可选）</label>
+      <textarea id="noteInput" class="modal-input" maxlength="200"
+                placeholder="今天做了什么？比如：上午深蹲 5 组，下午跑步 30 分钟"></textarea>
+
+      <div class="modal-error" id="modalError"></div>
+
+      <div class="modal-actions">
+        <button class="modal-btn secondary" id="modalCancel">取消</button>
+        <button class="modal-btn primary" id="modalSave">保存</button>
+      </div>
+      <div class="modal-actions" id="deleteRow" style="margin-top: 8px; display: none;">
+        <button class="modal-btn danger" id="modalDelete" style="width: 100%;">删除这条打卡</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = '';
+    const TOKEN_KEY = 'exercise_token';
+    const DARK_KEY = 'darkMode';
+
+    const TYPE_INFO = {
+      '力量': { emoji: '💪', label: '力量' },
+      '有氧': { emoji: '🏃', label: '有氧' },
+      '阻抗': { emoji: '🏋️', label: '阻抗' },
+      '日常': { emoji: '🚶', label: '日常' },
+    };
+
+    let allRecords = [];
+    let allowedTypes = ['力量', '有氧', '阻抗', '日常'];
+    let currentYear, currentMonth;
+    let modalDate = null;
+    let modalSelectedTypes = [];
+
+    // ============== 工具 ==============
     function getToken() { return localStorage.getItem(TOKEN_KEY); }
     function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
     function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function formatDate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
+    function todayStr() { return formatDate(new Date()); }
+    function isToday(d) { return d === todayStr(); }
+    function isBackfill(date) { return !isToday(date) && allRecords.some(r => r.date === date); }
+    function findRecord(date) { return allRecords.find(r => r.date === date); }
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-    // ============== 切换页面 ==============
+    // ============== 暗色模式 ==============
+    function applyDark(isDark) {
+      document.documentElement.classList.toggle('dark', isDark);
+      document.getElementById('darkToggle').textContent = isDark ? '☀️' : '🌙';
+      localStorage.setItem(DARK_KEY, isDark ? '1' : '0');
+    }
+    function initDark() {
+      const saved = localStorage.getItem(DARK_KEY);
+      if (saved === '1') applyDark(true);
+      else if (saved === '0') applyDark(false);
+      else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyDark(prefersDark);
+      }
+    }
+    document.getElementById('darkToggle').addEventListener('click', () => {
+      applyDark(!document.documentElement.classList.contains('dark'));
+    });
+
+    // ============== 页面切换 ==============
     function showAuth() {
       document.getElementById('authScreen').style.display = 'flex';
       document.getElementById('mainScreen').classList.remove('active');
@@ -233,39 +458,263 @@
       document.getElementById('mainScreen').classList.add('active');
     }
 
-    // ============== 工具 ==============
-    function pad2(n) { return String(n).padStart(2, '0'); }
-    function formatDate(d) {
-      return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-    }
-    function todayStr() { return formatDate(new Date()); }
-
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-      }[c]));
-    }
-
-    function updateCurrentDate() {
-      const now = new Date();
-      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-      document.getElementById('currentDate').textContent =
-        `${formatDate(now)} ${weekdays[now.getDay()]}`;
-    }
-
-    // ============== API 调用（自动带 token）==============
+    // ============== API ==============
     async function api(path, options = {}) {
       const token = getToken();
       const headers = options.headers ? { ...options.headers } : {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       const resp = await fetch(API_URL + path, { ...options, headers, cache: 'no-store' });
       if (resp.status === 401) {
-        clearToken();
-        showAuth();
-        throw new Error('登录已过期，请重新输入密码');
+        clearToken(); showAuth();
+        throw new Error('登录已过期');
       }
       return resp;
     }
+
+    async function loadData() {
+      try {
+        const resp = await api('/api/records');
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || '加载失败');
+        allRecords = data.records || [];
+        if (Array.isArray(data.allowedTypes)) allowedTypes = data.allowedTypes;
+        renderAll();
+      } catch (e) {
+        console.error('loadData:', e);
+      }
+    }
+
+    // ============== 统计 ==============
+    function calcStreak(records) {
+      if (!records.length) return 0;
+      const dates = [...new Set(records.map(r => r.date))].sort().reverse();
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      let streak = 0, expected = new Date(today);
+      if (dates[0] !== formatDate(today)) expected.setDate(expected.getDate() - 1);
+      for (const d of dates) {
+        if (d === formatDate(expected)) {
+          streak++;
+          expected.setDate(expected.getDate() - 1);
+        } else break;
+      }
+      return streak;
+    }
+
+    function renderStats() {
+      document.getElementById('streak').textContent = calcStreak(allRecords);
+      document.getElementById('total').textContent = new Set(allRecords.map(r => r.date)).size;
+
+      // 本月统计
+      const monthRecs = allRecords.filter(r => {
+        const d = new Date(r.date);
+        return d.getFullYear() === currentYear && d.getMonth() + 1 === currentMonth;
+      });
+      document.getElementById('monthTotal').textContent = monthRecs.length;
+
+      // 按类型统计本月
+      const typeCount = {};
+      for (const r of monthRecs) {
+        for (const t of (r.types || [])) {
+          typeCount[t] = (typeCount[t] || 0) + 1;
+        }
+      }
+      const typesEl = document.getElementById('monthTypes');
+      if (Object.keys(typeCount).length === 0) {
+        typesEl.innerHTML = '<div style="font-size: 12px; color: var(--text-tertiary);">本月还没有打卡</div>';
+      } else {
+        const sorted = Object.entries(typeCount).sort((a, b) => b[1] - a[1]);
+        typesEl.innerHTML = sorted.map(([t, n]) =>
+          `<span class="type-pill">${TYPE_INFO[t]?.emoji || ''} <strong>${n}</strong> ${TYPE_INFO[t]?.label || t}</span>`
+        ).join('');
+      }
+    }
+
+    // ============== 今日状态卡 ==============
+    function renderTodayStatus() {
+      const el = document.getElementById('todayStatus');
+      const rec = findRecord(todayStr());
+      if (!rec) {
+        el.className = 'today-status';
+        el.innerHTML = '<div class="empty">今日还未打卡</div>';
+        return;
+      }
+      el.className = 'today-status has-record';
+      const typeBadges = (rec.types || []).map(t =>
+        `<span class="type-badge">${TYPE_INFO[t]?.emoji || ''} ${TYPE_INFO[t]?.label || t}</span>`
+      ).join('');
+      el.innerHTML = `
+        <div class="today-status-title">
+          <div class="label">✅ 今日已打卡</div>
+          <div class="time">⏰ ${rec.time}</div>
+        </div>
+        <div class="types">${typeBadges}</div>
+        ${rec.note ? `<div class="note">${escapeHtml(rec.note)}</div>` : ''}
+        <div class="actions">
+          <button class="small-btn primary" id="editTodayBtn">编辑</button>
+          <button class="small-btn secondary" id="delTodayBtn">删除</button>
+        </div>
+      `;
+      document.getElementById('editTodayBtn').addEventListener('click', () => openModal(todayStr()));
+      document.getElementById('delTodayBtn').addEventListener('click', () => deleteDay(todayStr()));
+    }
+
+    // ============== 月历 ==============
+    function renderCalendar() {
+      document.getElementById('calTitle').textContent = `${currentYear}年${currentMonth}月`;
+
+      const firstDay = new Date(currentYear, currentMonth - 1, 1);
+      const startWeekday = firstDay.getDay();
+      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+      const recordsByDate = {};
+      for (const r of allRecords) recordsByDate[r.date] = r;
+
+      const cells = [];
+      for (let i = 0; i < startWeekday; i++) cells.push(null);
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = `${currentYear}-${pad2(currentMonth)}-${pad2(d)}`;
+        cells.push({ day: d, date, rec: recordsByDate[date] || null });
+      }
+      while (cells.length % 7 !== 0) cells.push(null);
+
+      const grid = document.getElementById('calGrid');
+      grid.innerHTML = cells.map(cell => {
+        if (!cell) return '<div class="cal-day empty"></div>';
+        const classes = ['cal-day'];
+        const isT = isToday(cell.date);
+        if (cell.rec) classes.push('has-record');
+        if (isT) classes.push('is-today');
+        const backfillMark = (cell.rec && !isT) ? '<span class="backfill-mark">↺</span>' : '';
+        const icons = cell.rec
+          ? `<div class="day-icons">${(cell.rec.types || []).map(t => TYPE_INFO[t]?.emoji || '').join('')}</div>`
+          : '';
+        return `<button class="${classes.join(' ')}" data-date="${cell.date}">
+          <span class="day-num">${cell.day}</span>${icons}${backfillMark}
+        </button>`;
+      }).join('');
+
+      grid.querySelectorAll('.cal-day:not(.empty)').forEach(btn => {
+        btn.addEventListener('click', () => openModal(btn.dataset.date));
+      });
+    }
+
+    function renderAll() {
+      renderStats();
+      renderTodayStatus();
+      renderCalendar();
+    }
+
+    // ============== 弹窗 ==============
+    function openModal(date) {
+      modalDate = date;
+      const rec = findRecord(date);
+      const isT = isToday(date);
+      const dateObj = new Date(date + 'T00:00:00');
+      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+      const title = rec
+        ? (isT ? '编辑今日打卡' : `编辑 ${dateObj.getMonth() + 1}月${dateObj.getDate()}日 打卡`)
+        : (isT ? '今日打卡' : `补卡 - ${dateObj.getMonth() + 1}月${dateObj.getDate()}日`);
+      document.getElementById('modalTitle').textContent = title;
+      document.getElementById('modalSubtitle').textContent =
+        isT ? '' : `补卡时间将记为 12:00（${weekdays[dateObj.getDay()]}）`;
+
+      // 类型按钮
+      modalSelectedTypes = rec ? [...rec.types] : [];
+      renderTypeGrid();
+
+      // 备注
+      document.getElementById('noteInput').value = rec ? rec.note : '';
+      document.getElementById('modalError').textContent = '';
+      document.getElementById('modalSave').disabled = false;
+      document.getElementById('modalSave').textContent = rec ? '保存修改' : '保存';
+
+      // 删除按钮：仅当有记录时显示
+      document.getElementById('deleteRow').style.display = rec ? 'flex' : 'none';
+
+      document.getElementById('modalBackdrop').classList.add('active');
+    }
+
+    function closeModal() {
+      document.getElementById('modalBackdrop').classList.remove('active');
+      modalDate = null;
+    }
+
+    function renderTypeGrid() {
+      const grid = document.getElementById('typeGrid');
+      grid.innerHTML = allowedTypes.map(t => {
+        const info = TYPE_INFO[t] || { emoji: '', label: t };
+        const selected = modalSelectedTypes.includes(t);
+        return `<button class="type-chip ${selected ? 'selected' : ''}" data-type="${t}">
+          <span class="emoji">${info.emoji}</span>${info.label}
+        </button>`;
+      }).join('');
+      grid.querySelectorAll('.type-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const t = btn.dataset.type;
+          if (modalSelectedTypes.includes(t)) {
+            modalSelectedTypes = modalSelectedTypes.filter(x => x !== t);
+          } else {
+            modalSelectedTypes.push(t);
+          }
+          renderTypeGrid();
+        });
+      });
+    }
+
+    async function saveModal() {
+      const errEl = document.getElementById('modalError');
+      const saveBtn = document.getElementById('modalSave');
+      errEl.textContent = '';
+
+      if (modalSelectedTypes.length === 0) {
+        errEl.textContent = '请至少选择一个运动类型';
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = '保存中...';
+
+      try {
+        const resp = await api('/api/records', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date: modalDate,
+            types: modalSelectedTypes,
+            note: document.getElementById('noteInput').value.trim(),
+          }),
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || '保存失败');
+        await loadData();
+        closeModal();
+      } catch (e) {
+        errEl.textContent = '❌ ' + e.message;
+        saveBtn.disabled = false;
+        saveBtn.textContent = '保存';
+      }
+    }
+
+    async function deleteDay(date) {
+      if (!confirm(`确定删除 ${date} 的打卡记录吗？此操作无法撤销。`)) return;
+      try {
+        const resp = await api(`/api/records?date=${encodeURIComponent(date)}`, { method: 'DELETE' });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || '删除失败');
+        await loadData();
+      } catch (e) {
+        alert('❌ ' + e.message);
+      }
+    }
+
+    document.getElementById('modalCancel').addEventListener('click', closeModal);
+    document.getElementById('modalSave').addEventListener('click', saveModal);
+    document.getElementById('modalDelete').addEventListener('click', () => {
+      if (modalDate) deleteDay(modalDate).then(closeModal);
+    });
+    document.getElementById('modalBackdrop').addEventListener('click', e => {
+      if (e.target === document.getElementById('modalBackdrop')) closeModal();
+    });
 
     // ============== 登录 ==============
     async function doLogin() {
@@ -273,16 +722,9 @@
       const btn = document.getElementById('loginBtn');
       const errEl = document.getElementById('authError');
       const password = input.value;
-
       errEl.textContent = '';
-      if (!password) {
-        errEl.textContent = '请输入密码';
-        return;
-      }
-
-      btn.disabled = true;
-      btn.textContent = '验证中...';
-
+      if (!password) { errEl.textContent = '请输入密码'; return; }
+      btn.disabled = true; btn.textContent = '验证中...';
       try {
         const resp = await fetch(API_URL + '/api/auth', {
           method: 'POST',
@@ -294,19 +736,18 @@
         setToken(data.token);
         input.value = '';
         showMain();
-        updateCurrentDate();
+        initCurrentMonth();
+        initDark();
         loadData();
         if (window._refreshTimer) clearInterval(window._refreshTimer);
         window._refreshTimer = setInterval(loadData, 60000);
       } catch (e) {
         errEl.textContent = '❌ ' + e.message;
       } finally {
-        btn.disabled = false;
-        btn.textContent = '进入';
+        btn.disabled = false; btn.textContent = '进入';
       }
     }
 
-    // ============== 退出 ==============
     function doLogout() {
       if (!confirm('确定要退出登录吗？')) return;
       clearToken();
@@ -314,152 +755,36 @@
       showAuth();
     }
 
-    // ============== 数据加载 ==============
-    function calcStats(records) {
-      if (!records.length) return { streak: 0, total: 0 };
-      const total = records.length;
-      const dateSet = [...new Set(records.map(r => r.date))].sort().reverse();
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      let streak = 0;
-      let expected = new Date(today);
-
-      if (dateSet[0] !== formatDate(today)) {
-        expected.setDate(expected.getDate() - 1);
-      }
-      for (const d of dateSet) {
-        if (d === formatDate(expected)) {
-          streak++;
-          expected.setDate(expected.getDate() - 1);
-        } else {
-          break;
-        }
-      }
-      return { streak, total };
-    }
-
-    function renderStats(records) {
-      const { streak, total } = calcStats(records);
-      document.getElementById('streak').textContent = streak;
-      document.getElementById('total').textContent = total;
-    }
-
-    function renderHistory(records) {
-      const list = document.getElementById('historyList');
-      if (!records.length) {
-        list.innerHTML = '<div class="empty">还没有打卡记录，从今天开始吧！</div>';
-        return;
-      }
-      const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
-      list.innerHTML = sorted.slice(0, 30).map(r => `
-        <div class="history-item">
-          <div class="history-dot"></div>
-          <div class="history-content">
-            <div class="history-meta">
-              <span class="history-date">${r.date}</span>
-              <span class="history-time">⏰ ${r.time}</span>
-            </div>
-            ${r.note ? `<div class="history-note">${escapeHtml(r.note)}</div>` : ''}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function checkToday(records) {
-      const today = todayStr();
-      const rec = records.find(r => r.date === today);
-      const status = document.getElementById('status');
-      const btn = document.getElementById('checkinBtn');
-      const input = document.getElementById('noteInput');
-      if (rec) {
-        status.className = 'status done';
-        status.textContent = `✅ 今天已打卡（${rec.time}）${rec.note ? ' - ' + rec.note : ''}`;
-        btn.textContent = '✅ 今日已完成';
-        btn.disabled = true;
-        input.disabled = true;
-        input.value = rec.note || '';
-        input.placeholder = '今日已完成';
-      } else {
-        status.className = 'status pending';
-        status.textContent = '⏳ 今日还未打卡';
-        btn.textContent = '✅ 今日打卡';
-        btn.disabled = false;
-        input.disabled = false;
-        input.placeholder = '今天做了什么运动？（可选）';
-      }
-    }
-
-    async function loadData() {
-      try {
-        const resp = await api('/api/records');
-        const data = await resp.json();
-        if (!data.ok) throw new Error(data.error || '加载失败');
-        const records = data.records || [];
-        renderStats(records);
-        renderHistory(records);
-        checkToday(records);
-      } catch (e) {
-        document.getElementById('historyList').innerHTML =
-          '<div class="empty">❌ 加载失败：' + escapeHtml(e.message) + '</div>';
-        console.error(e);
-      }
-    }
-
-    async function checkin() {
-      const input = document.getElementById('noteInput');
-      const note = input.value.trim();
-      const btn = document.getElementById('checkinBtn');
-      const status = document.getElementById('status');
-      btn.disabled = true;
-      const oldText = btn.textContent;
-      btn.textContent = '打卡中...';
-      try {
-        const resp = await api('/api/records', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ note }),
-        });
-        const data = await resp.json();
-        if (!data.ok) {
-          if (data.alreadyPunched) {
-            status.className = 'status done';
-            status.textContent = '✅ 今天已经打过卡了';
-          } else {
-            throw new Error(data.error || '打卡失败');
-          }
-        } else {
-          status.className = 'status done';
-          status.textContent = `✅ 打卡成功${note ? ' - ' + note : ''}！`;
-        }
-        btn.textContent = '✅ 今日已完成';
-        await loadData();
-      } catch (e) {
-        status.className = 'status error';
-        status.textContent = '❌ ' + e.message;
-        btn.disabled = false;
-        btn.textContent = oldText;
-      }
-    }
-
-    // ============== 事件绑定 ==============
     document.getElementById('loginBtn').addEventListener('click', doLogin);
     document.getElementById('passwordInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') doLogin();
     });
     document.getElementById('logoutBtn').addEventListener('click', doLogout);
-    document.getElementById('checkinBtn').addEventListener('click', checkin);
-    document.getElementById('noteInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !document.getElementById('checkinBtn').disabled) checkin();
-    });
+
+    // ============== 月份切换 ==============
+    function initCurrentMonth() {
+      const now = new Date();
+      currentYear = now.getFullYear();
+      currentMonth = now.getMonth() + 1;
+    }
+    function changeMonth(delta) {
+      currentMonth += delta;
+      if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+      if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+      renderStats();
+      renderCalendar();
+    }
+    document.getElementById('prevMonth').addEventListener('click', () => changeMonth(-1));
+    document.getElementById('nextMonth').addEventListener('click', () => changeMonth(1));
 
     // ============== 启动 ==============
     if (getToken()) {
       showMain();
-      updateCurrentDate();
-      loadData().then(() => {
-        if (window._refreshTimer) clearInterval(window._refreshTimer);
-        window._refreshTimer = setInterval(loadData, 60000);
-      });
+      initCurrentMonth();
+      initDark();
+      loadData();
+      if (window._refreshTimer) clearInterval(window._refreshTimer);
+      window._refreshTimer = setInterval(loadData, 60000);
     } else {
       showAuth();
     }
