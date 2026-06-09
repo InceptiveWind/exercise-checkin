@@ -156,7 +156,7 @@ git push -u origin main
 
 | 想做的事 | 怎么操作 |
 |----------|----------|
-| 改提醒时间 | 编辑 `.github/workflows/daily-reminder.yml` 的 cron 表达式 |
+| 改提醒时间 | 编辑 `.github/workflows/daily-reminder.yml` 的 cron 表达式（指定 `timezone: 'Asia/Shanghai'`）|
 | 改主题切换时间 | 编辑 `index.html` 的 `isTimeBasedDark()` 函数 |
 | 改密码 | Cloudflare Pages → Settings → Environment variables → 改 `APP_PASSWORD` → Retry deployment |
 | 换密钥 | 用 Python 生成新的 `secrets.token_hex(32)`，**同时**更新 Cloudflare 和 GitHub 两边的 `STATS_TOKEN` |
@@ -170,7 +170,7 @@ git push -u origin main
 1. **Vercel 域名在国内被 DNS 污染**（`*.vercel.app` 解析到 Facebook IP），所以没用 Vercel。Cloudflare Pages 在国内访问稳定。
 2. **`package.json` 不能有**（即使空），否则 Cloudflare Pages 会装 workerd（119MB），超出 25MB 资产上限。
 3. **不要把 `package.json` / `node_modules` 加进去**——本项目用纯标准库实现 Pages Functions，零依赖。
-4. **GitHub Actions 的 timezone**：cron 表达式是 UTC 时区。北京 20:00 = UTC 12:00。
+4. **GitHub Actions 的 timezone**：2026 年起 cron 支持 `timezone: 'Asia/Shanghai'` 字段直接指定时区，**不再需要 UTC 换算**。
 5. **跨时区打卡**：补卡和"今天"的判断都用 `tzOffset`，北京/纽约/UTC 用户都能正确处理。
 6. **Worker 域名（`*.workers.dev`）和 Pages 域名（`*.pages.dev`）是两回事**，别混。
 
