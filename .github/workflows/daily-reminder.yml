@@ -1,12 +1,8 @@
 name: 运动打卡提醒
 
 on:
-  # 2026 新特性：直接在 cron 里指定时区，每天北京时间 19:57 执行
-  # 选 19:57 避开整点高峰，给下班路上留点缓冲
-  schedule:
-    - cron: '57 19 * * *'
-      timezone: 'Asia/Shanghai'
-  # 允许手动触发（测试用）
+  # 定时任务已改用 cron-job.org 外部触发（更可靠）
+  # 保留手动触发用于测试
   workflow_dispatch:
 
 jobs:
