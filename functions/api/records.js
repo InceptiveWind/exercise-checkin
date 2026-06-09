@@ -167,9 +167,15 @@ async function getAllRecords(env) {
   return records;
 }
 
-async function saveRecord(env, date, types, note) {
-  // 当天：当前时间；补卡（过去）：12:00
-  const time = isToday(date) ? timeStr() : '12:00:00';
+async function saveRecord(env, date, types, note, clientTime) {
+  // 优先用前端传来的时间（已按用户时区算好）
+  // 兼容旧调用：按服务器 UTC 时间补一个
+  let time;
+  if (clientTime && /^\d{2}:\d{2}:\d{2}$/.test(clientTime)) {
+    time = clientTime;
+  } else {
+    time = isToday(date) ? timeStr() : '12:00:00';
+  }
   const value = JSON.stringify({ types, note, time });
   await redis(env, 'hset', KEY, date, value);
   return { date, types, note, time };
@@ -248,7 +254,7 @@ export async function onRequest(context) {
       }
 
       const note = String(body.note || '').slice(0, 200);
-      const record = await saveRecord(env, date, types, note);
+      const record = await saveRecord(env, date, types, note, body.time);
       return jsonResponse({ ok: true, record });
     }
 

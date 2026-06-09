@@ -195,6 +195,11 @@
       position: absolute; top: 1px; right: 2px;
       font-size: 8px; color: var(--text-tertiary); line-height: 1;
     }
+    .cal-day .check-mark {
+      position: absolute; top: 0; right: 2px;
+      font-size: 10px; color: var(--accent); font-weight: bold; line-height: 1;
+    }
+    :root.dark .cal-day .check-mark { color: var(--accent-dark); }
 
     /* ====== 今日打卡（固定按钮）====== */
     .quick-add {
@@ -434,6 +439,14 @@
     function isFuture(date) { return date > todayStr(); }
     function isBackfill(date) { return !isToday(date) && allRecords.some(r => r.date === date); }
     function getTzOffset() { return -new Date().getTimezoneOffset(); }
+    // 返回用户时区的当前时间字符串 "HH:MM:SS"
+    function nowInUserTz() {
+      const d = new Date();
+      const offset = -d.getTimezoneOffset();
+      const localMs = d.getTime() + offset * 60 * 1000;
+      const local = new Date(localMs);
+      return `${pad2(local.getUTCHours())}:${pad2(local.getUTCMinutes())}:${pad2(local.getUTCSeconds())}`;
+    }
     function findRecord(date) { return allRecords.find(r => r.date === date); }
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
@@ -605,12 +618,18 @@
         if (cell.rec) classes.push('has-record');
         if (isT) classes.push('is-today');
         if (isFuture(cell.date)) classes.push('future');
-        const backfillMark = (cell.rec && !isT) ? '<span class="backfill-mark">↺</span>' : '';
+        // 右上角标记：今日打卡 = 绿色 ✓，补卡 = 灰色 ↺
+        let cornerMark = '';
+        if (cell.rec) {
+          const isBackfillDay = !isT && cell.rec.time === '12:00:00';
+          if (isBackfillDay) cornerMark = '<span class="backfill-mark">↺</span>';
+          else cornerMark = '<span class="check-mark">✓</span>';
+        }
         const icons = cell.rec
           ? `<div class="day-icons">${(cell.rec.types || []).map(t => TYPE_INFO[t]?.emoji || '').join('')}</div>`
           : '';
         return `<button class="${classes.join(' ')}" data-date="${cell.date}">
-          <span class="day-num">${cell.day}</span>${icons}${backfillMark}
+          <span class="day-num">${cell.day}</span>${icons}${cornerMark}
         </button>`;
       }).join('');
 
@@ -698,6 +717,9 @@
       saveBtn.textContent = '保存中...';
 
       try {
+        // 当天打卡用真实时间（用户时区），补卡用 12:00:00
+        const isT = isToday(modalDate);
+        const clientTime = isT ? nowInUserTz() : '12:00:00';
         const resp = await api('/api/records', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -706,6 +728,7 @@
             types: modalSelectedTypes,
             note: document.getElementById('noteInput').value.trim(),
             tzOffset: getTzOffset(),  // 让后端用用户时区判断"今天"
+            time: clientTime,         // 前端算好时间，避免后端时区错
           }),
         });
         const data = await resp.json();
