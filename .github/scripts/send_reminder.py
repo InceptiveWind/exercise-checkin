@@ -99,6 +99,14 @@ def main():
         print("❌ 缺少环境变量 STATS_TOKEN")
         sys.exit(1)
 
+    # 时间窗口判断：只有北京时间 20:00-22:59 之间才推送
+    # GitHub schedule 经常延迟/跳过，所以给 3 小时窗口容忍
+    now = datetime.now()
+    beijing_hour = now.hour
+    if not (20 <= beijing_hour <= 22):
+        print(f"⏭️ 当前北京时间 {beijing_hour:02d}:xx，不在推送窗口（20-22 点），跳过")
+        return
+
     # 拉取战绩
     try:
         data = fetch_records(checkin_url, stats_token)
