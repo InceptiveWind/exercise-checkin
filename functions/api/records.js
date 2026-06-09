@@ -29,15 +29,30 @@ const ALLOWED_TYPES = ['力量', '有氧', '阻抗', '日常'];
 
 // ============== 工具 ==============
 function pad2(n) { return String(n).padStart(2, '0'); }
-function todayStr() {
+
+// 服务器当前 UTC 时间对应的"今天"
+function serverTodayStr() {
   const d = new Date();
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
 }
+
+// 按用户时区计算"今天"（tzOffsetMinutes: 北京=480, 纽约=-300, UTC=0）
+// 前端传 tzOffset: -new Date().getTimezoneOffset()
+function userTodayStr(tzOffsetMinutes) {
+  const offset = Number(tzOffsetMinutes) || 0;
+  const localMs = Date.now() + offset * 60 * 1000;
+  const d = new Date(localMs);
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+}
+
 function timeStr() {
   const d = new Date();
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
-function isToday(date) { return date === todayStr(); }
+function isToday(date) { return date === serverTodayStr(); }
+function isFutureInUserTz(date, tzOffsetMinutes) {
+  return date > userTodayStr(tzOffsetMinutes);
+}
 
 function corsHeaders() {
   return {
@@ -209,14 +224,19 @@ export async function onRequest(context) {
       let body = {};
       try { body = await request.json(); } catch (e) {}
 
-      const date = String(body.date || todayStr());
+      const date = String(body.date || serverTodayStr());
       // 简单日期校验
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return jsonResponse({ ok: false, error: '日期格式错误，应为 YYYY-MM-DD' }, 400);
       }
-      // 不能"打卡"未来
-      if (date > todayStr()) {
-        return jsonResponse({ ok: false, error: '不能打卡未来日期' }, 400);
+      // 用用户时区判断"今天"，避免跨时区误判未来日期
+      const tzOffset = Number(body.tzOffset) || 0;
+      if (isFutureInUserTz(date, tzOffset)) {
+        const userToday = userTodayStr(tzOffset);
+        return jsonResponse({
+          ok: false,
+          error: `不能打卡未来日期（你所在时区的今天是 ${userToday}）`,
+        }, 400);
       }
 
       const types = validateTypes(body.types);

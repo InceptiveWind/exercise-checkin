@@ -177,6 +177,12 @@
     .cal-day:active { background: var(--bg-card-hover); }
     .cal-day.empty { cursor: default; }
     .cal-day.empty:active { background: transparent; }
+    .cal-day.future {
+      opacity: 0.32;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
+    .cal-day.future .day-num { font-weight: 400; }
     .cal-day .day-num { font-size: 13px; line-height: 1; }
     .cal-day.has-record .day-num { font-weight: 600; }
     .cal-day.has-record { background: var(--calendar-record-bg); }
@@ -425,7 +431,9 @@
     function formatDate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; }
     function todayStr() { return formatDate(new Date()); }
     function isToday(d) { return d === todayStr(); }
+    function isFuture(date) { return date > todayStr(); }
     function isBackfill(date) { return !isToday(date) && allRecords.some(r => r.date === date); }
+    function getTzOffset() { return -new Date().getTimezoneOffset(); }
     function findRecord(date) { return allRecords.find(r => r.date === date); }
     function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
@@ -583,6 +591,7 @@
         const isT = isToday(cell.date);
         if (cell.rec) classes.push('has-record');
         if (isT) classes.push('is-today');
+        if (isFuture(cell.date)) classes.push('future');
         const backfillMark = (cell.rec && !isT) ? '<span class="backfill-mark">↺</span>' : '';
         const icons = cell.rec
           ? `<div class="day-icons">${(cell.rec.types || []).map(t => TYPE_INFO[t]?.emoji || '').join('')}</div>`
@@ -592,7 +601,8 @@
         </button>`;
       }).join('');
 
-      grid.querySelectorAll('.cal-day:not(.empty)').forEach(btn => {
+      // 只给非未来日期绑定点击
+      grid.querySelectorAll('.cal-day:not(.empty):not(.future)').forEach(btn => {
         btn.addEventListener('click', () => openModal(btn.dataset.date));
       });
     }
@@ -682,6 +692,7 @@
             date: modalDate,
             types: modalSelectedTypes,
             note: document.getElementById('noteInput').value.trim(),
+            tzOffset: getTzOffset(),  // 让后端用用户时区判断"今天"
           }),
         });
         const data = await resp.json();
