@@ -104,10 +104,12 @@ def main():
     msg = build_message(checkin_url, stats)
     try:
         result = send_wechat(sendkey, "🏃 运动打卡提醒", msg)
-        if result.get("code") == 200:
-            print("✅ 微信提醒已发送")
+        # Server酱 成功响应是 code=0（HTTP 状态是 200，但 body 里的 code 才是关键）
+        code = result.get("code")
+        if code in (0, 200):
+            print(f"✅ 微信提醒已发送（Server酱 code={code}）")
         else:
-            print(f"❌ 发送失败: {result}")
+            print(f"❌ 发送失败: code={code}, message={result.get('message')}")
             sys.exit(1)
     except Exception as e:
         print(f"❌ 推送异常: {e}")
