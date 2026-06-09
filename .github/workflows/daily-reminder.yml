@@ -1,11 +1,11 @@
 name: 运动打卡提醒
 
 on:
-  # 每小时触发一次（UTC 0 分）
-  # GitHub 的 schedule 经常延迟/跳过，所以用每小时跑 + 时间窗口判断
-  # 北京时间 20:00-22:59 之间执行发送逻辑，其它时间直接跳过
+  # 2026 新特性：直接在 cron 里指定时区，每天北京时间 20:40 执行
+  # 选 20:40 避开整点高峰，GitHub 调度更稳定
   schedule:
-    - cron: '0 * * * *'
+    - cron: '40 20 * * *'
+      timezone: 'Asia/Shanghai'
   # 允许手动触发（测试用）
   workflow_dispatch:
 
