@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4CAF50">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>运动打卡</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+      background: linear-gradient(180deg, #e8f5e9 0%, #ffffff 60%);
+      min-height: 100vh;
+      padding: 20px 16px 40px;
+      color: #333;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 480px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 20px; padding-top: 8px; }
+    .header h1 { font-size: 26px; color: #2e7d32; margin-bottom: 4px; }
+    .header .date { font-size: 14px; color: #666; }
+
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+    .stat-card {
+      background: white; border-radius: 12px; padding: 14px;
+      text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .stat-num { font-size: 26px; font-weight: bold; color: #2e7d32; line-height: 1.2; }
+    .stat-label { font-size: 12px; color: #999; margin-top: 4px; }
+
+    .checkin-card {
+      background: white; border-radius: 16px; padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 20px;
+    }
+    .checkin-card h2 { font-size: 17px; margin-bottom: 12px; color: #2e7d32; }
+
+    .status {
+      text-align: center; padding: 10px 12px; margin-bottom: 14px;
+      border-radius: 8px; font-size: 14px; line-height: 1.4;
+    }
+    .status.done { background: #e8f5e9; color: #2e7d32; }
+    .status.pending { background: #fff3e0; color: #e65100; }
+    .status.error { background: #ffebee; color: #c62828; }
+
+    .checkin-input {
+      width: 100%; border: 2px solid #e0e0e0; border-radius: 10px;
+      padding: 12px 14px; font-size: 15px; margin-bottom: 12px;
+      font-family: inherit; transition: border-color 0.2s;
+      -webkit-appearance: none; appearance: none;
+    }
+    .checkin-input:focus { outline: none; border-color: #4CAF50; }
+    .checkin-input::placeholder { color: #bbb; }
+
+    .checkin-btn {
+      width: 100%; background: #4CAF50; color: white; border: none;
+      border-radius: 10px; padding: 14px; font-size: 16px;
+      font-weight: bold; cursor: pointer; transition: all 0.2s;
+      font-family: inherit;
+    }
+    .checkin-btn:active { background: #388E3C; transform: scale(0.98); }
+    .checkin-btn:disabled { background: #bdbdbd; cursor: not-allowed; transform: none; }
+
+    .history {
+      background: white; border-radius: 16px; padding: 16px 18px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .history h2 { font-size: 17px; margin-bottom: 8px; color: #2e7d32; }
+
+    .history-item {
+      padding: 10px 0; border-bottom: 1px solid #f0f0f0;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: #4CAF50;
+      margin-top: 7px; flex-shrink: 0;
+    }
+    .history-content { flex: 1; min-width: 0; }
+    .history-meta { display: flex; align-items: baseline; gap: 8px; }
+    .history-date { font-weight: 600; color: #333; font-size: 14px; }
+    .history-time { color: #999; font-size: 12px; }
+    .history-note { color: #555; font-size: 14px; margin-top: 2px; word-break: break-word; }
+
+    .empty { text-align: center; color: #999; padding: 20px; font-size: 14px; }
+    .loading { text-align: center; padding: 20px; color: #999; font-size: 14px; }
+
+    .footer { text-align: center; color: #bbb; font-size: 12px; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🏃 运动打卡</h1>
+      <div class="date" id="currentDate"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-num" id="streak">-</div>
+        <div class="stat-label">🔥 连续天数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="total">-</div>
+        <div class="stat-label">📅 累计天数</div>
+      </div>
+    </div>
+
+    <div class="checkin-card">
+      <h2>今日打卡</h2>
+      <div id="status" class="status pending">加载中...</div>
+      <input type="text" id="noteInput" class="checkin-input"
+             placeholder="今天做了什么运动？（可选，如：跑步 5 公里）"
+             maxlength="100" autocomplete="off">
+      <button id="checkinBtn" class="checkin-btn">✅ 今日打卡</button>
+    </div>
+
+    <div class="history">
+      <h2>打卡历史</h2>
+      <div id="historyList" class="loading">加载中...</div>
+    </div>
+
+    <div class="footer">坚持就是胜利 💪</div>
+  </div>
+
+  <script>
+    const API_URL = '';  // 同源部署，留空即可
+
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function formatDate(d) {
+      return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    }
+    function todayStr() { return formatDate(new Date()); }
+
+    function updateCurrentDate() {
+      const now = new Date();
+      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      document.getElementById('currentDate').textContent =
+        `${formatDate(now)} ${weekdays[now.getDay()]}`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    function calcStats(records) {
+      if (!records.length) return { streak: 0, total: 0 };
+      const total = records.length;
+      const dateSet = [...new Set(records.map(r => r.date))].sort().reverse();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let streak = 0;
+      let expected = new Date(today);
+
+      // 今日没打不算断，从昨天开始算
+      if (dateSet[0] !== formatDate(today)) {
+        expected.setDate(expected.getDate() - 1);
+      }
+      for (const d of dateSet) {
+        if (d === formatDate(expected)) {
+          streak++;
+          expected.setDate(expected.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+      return { streak, total };
+    }
+
+    function renderStats(records) {
+      const { streak, total } = calcStats(records);
+      document.getElementById('streak').textContent = streak;
+      document.getElementById('total').textContent = total;
+    }
+
+    function renderHistory(records) {
+      const list = document.getElementById('historyList');
+      if (!records.length) {
+        list.innerHTML = '<div class="empty">还没有打卡记录，从今天开始吧！</div>';
+        return;
+      }
+      const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
+      list.innerHTML = sorted.slice(0, 30).map(r => `
+        <div class="history-item">
+          <div class="history-dot"></div>
+          <div class="history-content">
+            <div class="history-meta">
+              <span class="history-date">${r.date}</span>
+              <span class="history-time">⏰ ${r.time}</span>
+            </div>
+            ${r.note ? `<div class="history-note">${escapeHtml(r.note)}</div>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function checkToday(records) {
+      const today = todayStr();
+      const rec = records.find(r => r.date === today);
+      const status = document.getElementById('status');
+      const btn = document.getElementById('checkinBtn');
+      const input = document.getElementById('noteInput');
+      if (rec) {
+        status.className = 'status done';
+        status.textContent = `✅ 今天已打卡（${rec.time}）${rec.note ? ' - ' + rec.note : ''}`;
+        btn.textContent = '✅ 今日已完成';
+        btn.disabled = true;
+        input.disabled = true;
+        input.value = rec.note || '';
+        input.placeholder = '今日已完成';
+      } else {
+        status.className = 'status pending';
+        status.textContent = '⏳ 今日还未打卡';
+        btn.textContent = '✅ 今日打卡';
+        btn.disabled = false;
+        input.disabled = false;
+        input.placeholder = '今天做了什么运动？（可选）';
+      }
+    }
+
+    async function loadData() {
+      try {
+        const resp = await fetch(API_URL + '/api/records', { cache: 'no-store' });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.error || '加载失败');
+        const records = data.records || [];
+        renderStats(records);
+        renderHistory(records);
+        checkToday(records);
+      } catch (e) {
+        document.getElementById('historyList').innerHTML =
+          '<div class="empty">❌ 加载失败：' + escapeHtml(e.message) + '</div>';
+        console.error(e);
+      }
+    }
+
+    async function checkin() {
+      const input = document.getElementById('noteInput');
+      const note = input.value.trim();
+      const btn = document.getElementById('checkinBtn');
+      const status = document.getElementById('status');
+      btn.disabled = true;
+      const oldText = btn.textContent;
+      btn.textContent = '打卡中...';
+      try {
+        const resp = await fetch(API_URL + '/api/records', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ note }),
+        });
+        const data = await resp.json();
+        if (!data.ok) {
+          if (data.alreadyPunched) {
+            status.className = 'status done';
+            status.textContent = '✅ 今天已经打过卡了';
+          } else {
+            throw new Error(data.error || '打卡失败');
+          }
+        } else {
+          status.className = 'status done';
+          status.textContent = `✅ 打卡成功${note ? ' - ' + note : ''}！`;
+        }
+        btn.textContent = '✅ 今日已完成';
+        await loadData();
+      } catch (e) {
+        status.className = 'status error';
+        status.textContent = '❌ ' + e.message;
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+    }
+
+    document.getElementById('checkinBtn').addEventListener('click', checkin);
+    document.getElementById('noteInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !document.getElementById('checkinBtn').disabled) checkin();
+    });
+
+    updateCurrentDate();
+    loadData();
+
+    // 防止多设备数据不同步，每分钟自动刷新
+    setInterval(loadData, 60000);
+  </script>
+</body>
+</html>
